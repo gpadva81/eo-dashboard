@@ -161,54 +161,49 @@ function parseMS(ms){
   // Industries (from ms field)
   var ind=clean.match(/My Industries\s*:\s*([\s\S]*?)(?=Experience|Education|Contact|$)/);
   if(ind)r.industries=ind[1].trim();
-  // Experience - extract multiple entries
-  var expBlock=clean.match(/Experience([\s\S]*?)(?=Contact|Social Media|Emails|Email\s*:|Phone|$)/);
+  // Experience - extract entries using Qualifying Company as delimiter
+  var expBlock=clean.match(/Experience([\s\S]*?)(?=Contact|Social Media|EmailsEmail|Emails|Phone Number|$)/);
   if(expBlock){
     var expText=expBlock[1];
-    // Split on "Qualifying Company" to find each experience
-    var parts=expText.split(/Qualifying Company\s*\((?:Yes|No)\)/);
-    if(parts.length>1){
-      // First part before first QC has title+company pairs
-      var before=parts[0];
-      // Try to find title/company combos - they appear right before each QC marker
-      var allParts=expText.split(/(Qualifying Company\s*\((?:Yes|No)\))/);
-      var titleBuf='';
-      for(var i=0;i<allParts.length;i++){
-        if(/Qualifying Company/.test(allParts[i])&&titleBuf){
-          // Parse the title buffer for title + company name
-          // Pattern: TitleCompanyName (title is like CEO, Founder, President, etc.)
-          var tcMatch=titleBuf.match(/(.*?(?:CEO|COO|CFO|CTO|CMO|CIO|CPO|President|Founder|Owner|Director|Partner|Managing|Chairman|Principal|General Manager|VP|Vice President|Co-Founder|Co-CEO|Corporate Secretary|Mrs)[^\n]*?)([\s\S]*)/i);
-          var expEntry={title:'',company:'',location:'',dates:'',description:''};
-          if(tcMatch){
-            expEntry.title=tcMatch[1].trim();
-            expEntry.company=tcMatch[2].trim();
-          } else {
-            // Fallback - first chunk is title, rest is company
-            var chunks=titleBuf.trim().split(/(?=[A-Z])/);
-            expEntry.title=titleBuf.trim();
+    var titleList=['Chief Executive Officer','Chief Operating Officer','Chief Financial Officer',
+      'Chief Technology Officer','Chief Marketing Officer','Chief Information Officer','Chief People Officer',
+      'President and CEO','President & CEO','President and COO','Founder and CEO','Founder & CEO',
+      'Founder and President','Founder and CFO and VP of Business Development',
+      'Co-Founder and CEO','Co-Founder','Co-CEO','Managing Partner','Managing Director','Managing Member',
+      'Executive Director','General Manager','Vice President','CEO/General Manager',
+      'CEO','COO','CFO','CTO','CMO','CIO','CPO','President','Founder','Director','Partner',
+      'Owner','Principal','Chairman','Corporate Secretary','Mrs'];
+    titleList.sort(function(a,b){return b.length-a.length});
+    var titlePattern=titleList.map(function(t){return t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}).join('|');
+    // Split around QC markers
+    var qcParts=expText.split(/(Qualifying Company\s*\((?:Yes|No)\))/);
+    var titleBuf='';
+    for(var qi=0;qi<qcParts.length;qi++){
+      if(/Qualifying Company/.test(qcParts[qi])&&titleBuf){
+        var expEntry={title:'',company:'',location:'',dates:'',description:''};
+        var tcRe=new RegExp('(.*?(?:'+titlePattern+'))\\s*(.*)','i');
+        var tcM=titleBuf.trim().match(tcRe);
+        if(tcM){expEntry.title=tcM[1].trim();expEntry.company=tcM[2].trim();}
+        else{expEntry.company=titleBuf.trim();}
+        // After QC marker: location, dates, description
+        if(qi+1<qcParts.length){
+          var after=qcParts[qi+1];
+          var locDt=after.match(/^([^0-9]*?)(\d{2}-\d{4}\s*-\s*(?:Present|[^\n]*?)(?:\s*·\s*[^\n]*)?)([\s\S]*)/);
+          if(locDt){
+            expEntry.location=locDt[1].trim();
+            expEntry.dates=locDt[2].trim();
+            var desc=locDt[3].trim().replace(/\.{3}see more[\s\S]*/,'').replace(/see more[\s\S]*/,'');
+            // Stop desc at next experience entry (title keyword at start)
+            var nextRe=new RegExp('('+titlePattern+')','i');
+            var nextIdx=desc.search(nextRe);
+            if(nextIdx>0)desc=desc.substring(0,nextIdx).trim();
+            expEntry.description=desc;
           }
-          // After QC marker, next part has location, dates, description
-          if(i+1<allParts.length){
-            var after=allParts[i+1];
-            var locDt=after.match(/^([^0-9]*?)(\d{2}-\d{4}\s*-\s*(?:Present|[^\n]*?)(?:\s*·\s*[^\n]*)?)([\s\S]*)/);
-            if(locDt){
-              expEntry.location=locDt[1].trim();
-              expEntry.dates=locDt[2].trim();
-              // Description is remaining text until next title
-              var desc=locDt[3].trim();
-              // Remove "...see more" and trailing junk
-              desc=desc.replace(/\.\.\.see more[\s\S]*/,'').replace(/see more[\s\S]*/,'');
-              // Stop at next experience entry (next title pattern)
-              var nextExp=desc.match(/([\s\S]*?)(?=(?:CEO|COO|CFO|CTO|CMO|Founder|Owner|Director|Partner|President|Managing|Chairman)[A-Za-z\s]*(?:Qualifying|$))/i);
-              if(nextExp&&nextExp[1].trim())desc=nextExp[1].trim();
-              expEntry.description=desc;
-            }
-          }
-          if(expEntry.title||expEntry.company)r.experiences.push(expEntry);
-          titleBuf='';
-        } else if(!/Qualifying Company/.test(allParts[i])){
-          titleBuf+=allParts[i];
         }
+        if(expEntry.title||expEntry.company)r.experiences.push(expEntry);
+        titleBuf='';
+      } else if(!/Qualifying Company/.test(qcParts[qi])){
+        titleBuf+=qcParts[qi];
       }
     }
   }
