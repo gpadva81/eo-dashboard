@@ -234,7 +234,7 @@ function parseMS(ms){
     if(eduText.length<500)r.education=eduText;
   }
   // Emails - get all
-  var emailRe=/Email\s*:\s*([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/gi;
+  var emailRe=/Email\s*:\s*([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,6})(?![a-z])/gi;
   var em;while((em=emailRe.exec(clean))!==null)r.emails.push(em[1]);
   // Phones - get all with labels
   var phonePatterns=[
@@ -286,7 +286,20 @@ function row(label,val){return val?'<div class="dr"><span class="dl">'+label+'</
 
 function od(id){const m=A.find(x=>x.id===id);if(!m)return;
 const p=parseMS(m.ms);
-var html='<div class="dn" style="font-size:1.4rem;margin-bottom:.5rem">'+esc(m.n)+'</div>';
+// Derive website from email domain
+var website='';
+if(p.emails.length){var emailDomain=p.emails[0].split('@')[1];
+if(emailDomain&&!(/gmail|yahoo|hotmail|outlook|aol|icloud|me\.com|live\.com|msn\.com|protonmail/i.test(emailDomain)))
+website='https://'+emailDomain;}
+// Card header with company + website top right
+var companyLine='';
+if(p.experiences.length&&p.experiences[0].company)companyLine=p.experiences[0].company;
+var html='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem">';
+html+='<div class="dn" style="font-size:1.4rem;margin-bottom:.2rem">'+esc(m.n)+'</div>';
+html+='<div style="text-align:right;flex-shrink:0;min-width:0">';
+if(companyLine)html+='<div style="font-weight:700;font-size:.88rem;color:var(--ca)">'+esc(companyLine)+'</div>';
+if(website)html+='<a href="'+website+'" target="_blank" style="color:var(--ac);font-size:.78rem;word-break:break-all">'+website.replace('https://','')+'</a>';
+html+='</div></div>';
 // Membership header
 html+='<div style="margin-bottom:1rem">';
 html+=row('<strong>Member Since</strong>',p.date||'—');
