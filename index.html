@@ -220,13 +220,13 @@ function parseMS(ms){
     if(eduText.length<500)r.education=eduText;
   }
   // Emails - get all
-  var emailRe=/Email\s*:\s*([^\s,;]+@[^\s,;]+)/gi;
+  var emailRe=/Email\s*:\s*([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/gi;
   var em;while((em=emailRe.exec(clean))!==null)r.emails.push(em[1]);
   // Phones - get all with labels
   var phonePatterns=[
-    [/Preferred Phone No:\s*([\d\+\s\(\)\-]+)/,'Preferred'],
-    [/Mobile Phone No:\s*([\d\+\s\(\)\-]+)/,'Mobile'],
-    [/Home Phone No:\s*([\d\+\s\(\)\-]+)/,'Home']
+    [/Preferred Phone No:\s*([\d\+\s\(\)\-\.]{7,20})/,'Preferred'],
+    [/Mobile Phone No:\s*([\d\+\s\(\)\-\.]{7,20})/,'Mobile'],
+    [/Home Phone No:\s*([\d\+\s\(\)\-\.]{7,20})/,'Home']
   ];
   phonePatterns.forEach(function(pp){var m=clean.match(pp[0]);if(m)r.phones.push({label:pp[1],number:m[1].trim()})});
   // Addresses
@@ -321,7 +321,14 @@ if(p.secondaryAddress)ctHtml+='<div class="dr"><span class="dl">Secondary</span>
 ctHtml+='</div>';}
 html+=sec('Contact',ctHtml);
 // Family
-if(p.family)html+=sec('Family Information','<div style="font-size:.82rem">'+esc(p.family).replace(/Access Granted/g,'<span style="color:var(--gr);font-size:.7rem"> ✓ Access Granted</span>').replace(/No Access/g,'<span style="color:var(--mu);font-size:.7rem"> 🔒 No Access</span>')+'</div>');
+if(p.family){
+var famDisplay=esc(p.family)
+  .replace(/Spouse\s*\/\s*Life Partner/g,'<div style="font-weight:600;margin-top:.3rem">Spouse / Life Partner</div>')
+  .replace(/Adult Children/g,'<div style="font-weight:600;margin-top:.5rem">Adult Children</div>')
+  .replace(/Access Granted/g,'<span style="color:var(--gr);font-size:.7rem"> ✓ Access</span>')
+  .replace(/No Access/g,'<span style="color:var(--mu);font-size:.7rem"> 🔒</span>')
+  .replace(/([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/g,'<a href="mailto:$1" style="color:var(--ac);font-size:.78rem">$1</a>');
+html+=sec('Family Information','<div style="font-size:.82rem">'+famDisplay+'</div>');}
 // Profile link
 html+='<div class="ds"><a href="https://one.eonetwork.org/users/'+m.id+'" target="_blank" class="btn" style="display:block;text-align:center;text-decoration:none;margin-top:1rem">View on EO Portal →</a></div>';
 document.getElementById('dC').innerHTML=html;
