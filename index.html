@@ -234,7 +234,7 @@ function parseMS(ms){
     if(eduText.length<500)r.education=eduText;
   }
   // Emails - get all
-  var emailRe=/Email\s*:\s*([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,6})(?![a-z])/gi;
+  var emailRe=/Email\s*:\s*([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-z]{2,4})(?![a-z])/gi;
   var em;while((em=emailRe.exec(clean))!==null)r.emails.push(em[1]);
   // Phones - get all with labels
   var phonePatterns=[
