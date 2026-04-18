@@ -57,6 +57,10 @@ tr:hover{background:rgba(59,130,246,.05);cursor:pointer}
 .dr{display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--bd)}
 .dl{color:var(--mu);font-size:.82rem}.dv{font-size:.82rem;text-align:right;max-width:60%}
 @media(max-width:768px){.sb{display:none}.cg{grid-template-columns:1fr}.kg{grid-template-columns:repeat(2,1fr)}}
+.about-toggle{background:var(--sf2);border:1px solid var(--bd);color:var(--mu);padding:.35rem .6rem;border-radius:6px;cursor:pointer;font-size:.75rem;margin-top:.5rem;width:100%;text-align:left}
+.about-toggle:hover{color:var(--tx)}
+.about-content{display:none;font-size:.82rem;color:var(--mu);margin-top:.5rem;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.about-content.open{display:block}
 </style></head><body>
 <div class="sb">
 <div class="sb-h"><h1>🏛️ EO Network CRM</h1><p>CA & AZ • 1126 Members</p></div>
@@ -90,7 +94,7 @@ tr:hover{background:rgba(59,130,246,.05);cursor:pointer}
 <div class="tc"><div class="th2"><h3>Member Directory</h3><button class="btn exp" style="width:auto" onclick="csv()">📥 Export</button></div>
 <div class="ts"><table><thead><tr>
 <th onclick="srt('n')">Name ↕</th><th onclick="srt('ci')">City ↕</th><th onclick="srt('s')">State ↕</th>
-<th onclick="srt('ch')">Chapter ↕</th><th onclick="srt('ind')">Industries ↕</th><th onclick="srt('ms')">Since ↕</th>
+<th onclick="srt('ch')">Chapter ↕</th><th onclick="srt('ind')">Industries ↕</th><th>Email</th><th onclick="srt('ms')">Since ↕</th>
 </tr></thead><tbody id="tbd"></tbody></table></div>
 <div class="tf"><div class="pi" id="pI"></div><div class="pb" id="pB"></div></div></div></div></div>
 <div class="dp" id="dp"><button class="dc" onclick="cd()">✕</button><div id="dC"></div></div>
@@ -125,14 +129,43 @@ rt();uc()}
 
 function srt(f){if(sf===f)sd*=-1;else{sf=f;sd=1}af()}
 
+function parseMS(ms){
+  if(!ms)return{date:'',email:'',phone:'',address:'',company:'',title:'',about:''};
+  var clean=ms.replace(/\(function\s*\(\s*\)[\s\S]*/,'');
+  var date=/^\d{2}\/\d{2}\/\d{4}/.test(clean.trim())?clean.trim().slice(0,10):'';
+  var em=clean.match(/Email\s*:\s*([^\s]+@[^\s]+)/i);
+  var email=em?em[1].replace(/[,;>]+$/,''):'';
+  var ph=clean.match(/Preferred Phone No:\s*([\d\+\s\(\)\-]+)/)||clean.match(/Mobile Phone No:\s*([\d\+\s\(\)\-]+)/)||clean.match(/Home Phone No:\s*([\d\+\s\(\)\-]+)/);
+  var phone=ph?ph[1].trim().replace(/\s+/g,' '):'';
+  var ad=clean.match(/Primary Address([\s\S]*?)(?:Secondary Address|Family Information|Expand footer|\(function|$)/);
+  var address=ad?ad[1].replace(/^\s*\n/,'').replace(/\n{3,}/g,'\n\n').trim():'';
+  var company='',title='';
+  var exp=clean.match(/Experience([\s\S]*?)(?:ContactEmails|Emails|Phone Number|Contact Address|Leadership|Industries|About|$)/);
+  if(exp){
+    var expText=exp[1];
+    var qc=expText.match(/([\s\S]*?)Qualifying Company/);
+    if(qc){
+      var lines=qc[1].split(/\n/).map(function(l){return l.trim();}).filter(Boolean);
+      if(lines.length>=2){title=lines[0];company=lines[1];}
+      else if(lines.length===1){title=lines[0];}
+    }
+  }
+  var ab=clean.match(/About Me\s*:\s*([\s\S]*?)(?:Birthday\s*:|Gender\s*:|Leadership|Industries|Experience|$)/i);
+  var about=ab?ab[1].trim():'';
+  return{date:date,email:email,phone:phone,address:address,company:company,title:title,about:about};
+}
+
 function rt(){const s=(p-1)*PP,pg=F.slice(s,s+PP);
-document.getElementById('tbd').innerHTML=pg.map(m=>
-'<tr onclick="od('+m.id+')">'+
+document.getElementById('tbd').innerHTML=pg.map(m=>{
+const ms=parseMS(m.ms);
+return '<tr onclick="od('+m.id+')">'+
 '<td><span class="mn-n"><a href="https://one.eonetwork.org/users/'+m.id+'" target="_blank" onclick="event.stopPropagation()">'+m.n+'</a></span></td>'+
 '<td>'+m.ci+'</td><td><span class="bg bg-'+m.s.toLowerCase()+'">'+m.s+'</span></td>'+
 '<td><span class="ch-n">'+(m.ch?m.ch.replace('EO ',''):'—')+'</span></td>'+
 '<td>'+(m.ind?m.ind.split(',').slice(0,3).map(i=>'<span class="it">'+i.trim()+'</span>').join(''):'—')+'</td>'+
-'<td style="color:var(--mu);font-size:.75rem">'+(m.ms||'—')+'</td></tr>').join('');
+'<td style="font-size:.75rem">'+(ms.email?'<a href="mailto:'+ms.email+'" onclick="event.stopPropagation()" style="color:var(--ac)">'+ms.email+'</a>':'—')+'</td>'+
+'<td style="color:var(--mu);font-size:.75rem">'+(ms.date||'—')+'</td></tr>';
+}).join('');
 const t=Math.ceil(F.length/PP);
 document.getElementById('pI').textContent='Page '+p+'/'+t+' ('+F.length+')';
 let b='';for(let i=1;i<=t;i++){if(i===1||i===t||Math.abs(i-p)<=2)b+='<button class="pg'+(i===p?' active':'')+'" onclick="gp('+i+')">'+i+'</button>';
@@ -147,12 +180,23 @@ document.getElementById('vT').style.display=v==='t'?'block':'none'}
 
 function od(id){const m=A.find(x=>x.id===id);if(!m)return;
 const it=m.ind?m.ind.split(',').map(i=>'<span class="it" style="font-size:.8rem;padding:.15rem .4rem">'+i.trim()+'</span>').join(' '):'—';
+const p=parseMS(m.ms);
 document.getElementById('dC').innerHTML=
-'<div class="dn">'+m.n+'</div><span class="bg bg-'+m.s.toLowerCase()+'" style="font-size:.8rem">'+m.s+'</span> <span style="color:var(--mu)">'+m.ci+'</span>'+
+'<div class="dn">'+m.n+'</div>'+
+'<span class="bg bg-'+m.s.toLowerCase()+'" style="font-size:.8rem">'+m.s+'</span> <span style="color:var(--mu)">'+m.ci+'</span>'+
 '<div class="ds"><h4>Membership</h4>'+
 '<div class="dr"><span class="dl">Chapter</span><span class="dv" style="color:var(--gr)">'+(m.ch||'—')+'</span></div>'+
-'<div class="dr"><span class="dl">Member Since</span><span class="dv">'+(m.ms||'—')+'</span></div></div>'+
+'<div class="dr"><span class="dl">Member Since</span><span class="dv">'+(p.date||'—')+'</span></div>'+
+(p.title?'<div class="dr"><span class="dl">Title</span><span class="dv">'+p.title+'</span></div>':'')+
+(p.company?'<div class="dr"><span class="dl">Company</span><span class="dv">'+p.company+'</span></div>':'')+
+(p.email?'<div class="dr"><span class="dl">Email</span><span class="dv"><a href="mailto:'+p.email+'" style="color:var(--ac)">'+p.email+'</a></span></div>':'')+
+(p.phone?'<div class="dr"><span class="dl">Phone</span><span class="dv">'+p.phone+'</span></div>':'')+
+(p.address?'<div class="dr"><span class="dl">Address</span><span class="dv" style="font-size:.75rem">'+p.address.replace(/\n/g,'<br>')+'</span></div>':'')+
+'</div>'+
 '<div class="ds"><h4>Industries</h4><div style="margin-top:.3rem">'+it+'</div></div>'+
+(p.about?'<div class="ds"><h4>About</h4>'+
+'<button class="about-toggle" onclick="var c=this.nextElementSibling;c.classList.toggle(\'open\');this.textContent=c.classList.contains(\'open\')?\'▲ Collapse\':\'▼ Expand About Me\'">▼ Expand About Me</button>'+
+'<div class="about-content">'+p.about.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div></div>':'')+
 '<div class="ds"><a href="https://one.eonetwork.org/users/'+m.id+'" target="_blank" class="btn" style="display:block;text-align:center;text-decoration:none;margin-top:1rem">View Full Profile →</a></div>';
 document.getElementById('dp').classList.add('open')}
 function cd(){document.getElementById('dp').classList.remove('open')}
